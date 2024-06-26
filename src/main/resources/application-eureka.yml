@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: ws-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+
+server:
+  port: 18889
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8000/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+
+jwt:
+  public:
+    key: ${JWT_PUBLIC_SECRET_KEY}
+  access-token:
+    expiration: 3600000
+  refresh-token:
+    expiration: 36000000
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.web.reactive: DEBUG

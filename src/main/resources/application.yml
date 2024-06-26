@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: ws-gateway
+  cloud:
+    config:
+      discovery:
+        service-id: ws-cloud-config-server
+        enabled: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE}
+  instance:
+    prefer-ip-address: true
+

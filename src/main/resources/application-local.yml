@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: ws-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: ws-auth
+          uri: http://ws-auth
+          predicates:
+            - Path=/ws-auth/**
+          filters:
+            - RewritePath=/ws-auth/(?<segment>.*), /${segment}
+
+server:
+  port: 18889
+  servlet:
+    encoding:
+      force: true
+      charset: UTF-8
+
+jwt:
+  public:
+    key: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArT6KtqFnF72D9wyV3ArXkErvFQVDyNvpCP/FUUHV1xFWrJHJC/pozUotAO+OwD+YYBSVatTl4DUQrxHupo05WFMQ2PoGjnj5VKRwGJYQHA5gXymN/MDwNDLwLBRNW99NGRFTJGUy3l+PWZRZR+ENAqQSFIPMJMkU1dn03n868ICQywkBCIDENxhHcZqcEdWSfWzRsG4xIO3egAPtywRVwMs8Urv97fgyBwyz7R4TJ6aXf6BzIlA84ua+ehUFI757o4QCjsSSqi5dhbRdoBpQuhi8SnosamZETeYqBJEp8E1Fo7STWVLOSgqRXFi8rnrwtif4pXsUc8GH5J05lp1QwQIDAQAB
+  access-token:
+    expiration: 3600000
+  refresh-token:
+    expiration: 36000000
