@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: ws-gateway
+  config:
+    import: configserver:${CONFIG_SERVER}

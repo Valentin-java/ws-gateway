@@ -7,17 +7,11 @@ spring:
         locator:
           enabled: true
           lower-case-service-id: true
-
 server:
   port: 18889
-
 eureka:
   client:
-    service-url:
-      defaultZone: http://localhost:8000/eureka/
-    fetch-registry: true
-    register-with-eureka: true
-
+    enabled: false
 jwt:
   public:
     key: ${JWT_PUBLIC_SECRET_KEY}
@@ -25,8 +19,3 @@ jwt:
     expiration: 3600000
   refresh-token:
     expiration: 36000000
-
-management:
-  tracing:
-    sampling:
-      probability: 1.0
