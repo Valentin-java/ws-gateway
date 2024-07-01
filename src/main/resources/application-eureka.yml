@@ -8,6 +8,7 @@ spring:
           enabled: true
           lower-case-service-id: true
 
+
 server:
   port: 18889
 
@@ -30,3 +31,4 @@ management:
   tracing:
     sampling:
       probability: 1.0
+
