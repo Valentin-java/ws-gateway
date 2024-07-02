@@ -21,18 +21,28 @@ public class SecurityValidationWebFluxUtil {
                 || !header.startsWith(AUTH_TOKEN_PREFIX);
     }
 
-    public static boolean whenUsernameMissing(ServerHttpRequest context) throws IOException {
+    public static boolean whenUsernameMissing(ServerHttpRequest context) {
         String header = getHeaderRequest(context);
-        TokenUser username = getUsername(header);
+        TokenUser username = null;
+        try {
+            username = getUsername(header);
+        } catch (IOException e) {
+            return true;
+        }
         return username == null;
     }
 
-    public static boolean whenTokenExpired(ServerHttpRequest context) throws IOException {
+    public static boolean whenTokenExpired(ServerHttpRequest context) {
         String header = getHeaderRequest(context);
-        TokenUser user = getUsername(header);
+        TokenUser user = null;
+        try {
+            user = getUsername(header);
+        } catch (IOException e) {
+            return true;
+        }
         Long exp = user.getExp();
         if (exp == null) {
-            throw new IllegalArgumentException("Token does not contain expiration date");
+            return true;
         }
         return new Date(exp * 1000).before(new Date());
     }
@@ -47,9 +57,13 @@ public class SecurityValidationWebFluxUtil {
         return null;
     }
 
-    public static TokenUser getUsername(ServerHttpRequest context) throws IOException {
+    public static TokenUser getUsername(ServerHttpRequest context) {
         String header = getHeaderRequest(context);
-        return getUsername(header);
+        try {
+            return getUsername(header);
+        } catch (IOException e) {
+            return null;
+        }
     }
 
     public static TokenUser getUsername(String header) throws IOException {

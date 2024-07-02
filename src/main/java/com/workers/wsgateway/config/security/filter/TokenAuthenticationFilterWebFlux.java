@@ -1,7 +1,6 @@
 package com.workers.wsgateway.config.security.filter;
 
 import com.workers.wsgateway.config.security.context.AuthenticationFilterWebFluxContext;
-import com.workers.wsgateway.config.security.context.TokenUser;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,8 +13,8 @@ import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
-import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import static com.workers.wsgateway.config.security.util.SecurityValidationWebFluxUtil.getUsername;
 import static com.workers.wsgateway.config.security.util.SecurityValidationWebFluxUtil.whenHeaderMissing;
@@ -27,10 +26,25 @@ import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 @Component
 public class TokenAuthenticationFilterWebFlux implements WebFilter {
 
+    private static final List<String> WHITELIST = List.of(
+            "/actuator/health",
+            "/actuator/prometheus",
+            "/advisor",
+            "/swagger-ui",
+            "/specs",
+            "/ws-auth/v1/workers/auth/login");
+
     @Override
     public Mono<Void> filter(@NonNull ServerWebExchange exchange,
                              @NonNull WebFilterChain chain) {
         log.debug("[doFilterInternal] Start method");
+        if (!WHITELIST.contains(exchange.getRequest().getPath().value())) {
+            return doFilterRequest(exchange, chain);
+        }
+        return chain.filter(exchange);
+    }
+
+    private Mono<Void> doFilterRequest(ServerWebExchange exchange, WebFilterChain chain) {
         return createContextFilter(exchange, chain)
                 .flatMap(this::validateHeader)
                 .flatMap(this::validateUsername)
@@ -43,7 +57,11 @@ public class TokenAuthenticationFilterWebFlux implements WebFilter {
                 })
                 .onErrorResume(e -> {
                     log.error("[TokenAuthenticationFilter] Authentication error", e);
-                    return chain.filter(exchange);
+
+                    exchange.getResponse().setStatusCode(UNAUTHORIZED);
+                    return exchange.getResponse().writeWith(
+                            Mono.just(exchange.getResponse().bufferFactory().wrap(e.getMessage().getBytes()))
+                    );
                 });
     }
 
@@ -52,62 +70,46 @@ public class TokenAuthenticationFilterWebFlux implements WebFilter {
     }
 
     private Mono<AuthenticationFilterWebFluxContext> validateHeader(AuthenticationFilterWebFluxContext context) {
-        return Mono.defer(() -> {
-            log.debug("[validateHeader] Validating header");
-            if (whenHeaderMissing(context.getExchange().getRequest())) {
-                log.debug("[validateHeader] Header is missing");
-                return Mono.error(new ResponseStatusException(UNAUTHORIZED, "Отсуствует заголовок"));
-            }
-            log.debug("[validateHeader] Header is present");
-            return Mono.just(context);
-        });
+        return Mono.just(context)
+                .doOnNext(ctx -> log.debug("[validateHeader] Validating header"))
+                .flatMap(ctx -> whenHeaderMissing(ctx.getExchange().getRequest()) ?
+                        Mono.error(new ResponseStatusException(UNAUTHORIZED, "Отсуствует заголовок")) :
+                        Mono.just(ctx))
+                .doOnNext(ctx -> log.debug("[validateHeader] Header is present"));
     }
 
     private Mono<AuthenticationFilterWebFluxContext> validateUsername(AuthenticationFilterWebFluxContext context) {
-        return Mono.defer(() -> {
-            log.debug("[validateUsername] Validating username");
-            try {
-                if (whenUsernameMissing(context.getExchange().getRequest())) {
-                    log.error("[validateUsername] Token provided but not content data!");
-                    return Mono.error(new ResponseStatusException(UNAUTHORIZED, "Отсуствует имя пользователя"));
-                }
-            } catch (IOException e) {
-                log.error("[validateUsername] Unexpected error");
-                return Mono.error(new ResponseStatusException(UNAUTHORIZED, "Непредвиденная ошибка"));
-            }
-            log.debug("[validateUsername] Username is present");
-            return Mono.just(context);
-        });
+        return Mono.just(context)
+                .doOnNext(ctx -> log.debug("[validateUsername] Validating username"))
+                .flatMap(ctx -> whenUsernameMissing(ctx.getExchange().getRequest()) ?
+                        Mono.error(new ResponseStatusException(UNAUTHORIZED, "Отсутствует имя пользователя")) :
+                        Mono.just(ctx))
+                .doOnNext(ctx -> log.debug("[validateUsername] Username is present"));
     }
 
     private Mono<AuthenticationFilterWebFluxContext> validateTokenExpiration(AuthenticationFilterWebFluxContext context) {
-        return Mono.defer(() -> {
-            log.debug("[validateTokenExpiration] Validating token expiration");
-            try {
-                if (whenTokenExpired(context.getExchange().getRequest())) {
-                    log.error("[validateTokenExpiration] Время жизни токена истекло.");
-                    return Mono.error(new ResponseStatusException(UNAUTHORIZED, "Время жизни токена истекло"));
-                }
-            } catch (IOException e) {
-                log.error("[validateTokenExpiration] Unexpected error");
-                return Mono.error(new ResponseStatusException(UNAUTHORIZED, "Непредвиденная ошибка"));
-            }
-            log.debug("[validateTokenExpiration] Token is valid");
-            return Mono.just(context);
-        });
+        return Mono.just(context)
+                .doOnNext(ctx -> log.debug("[validateTokenExpiration] Validating token expiration"))
+                .flatMap(ctx -> whenTokenExpired(ctx.getExchange().getRequest()) ?
+                        Mono.error(new ResponseStatusException(UNAUTHORIZED, "Время жизни токена истекло")) :
+                        Mono.just(ctx))
+                .doOnNext(ctx -> log.debug("[validateTokenExpiration] Token is valid"));
     }
 
     private Mono<Authentication> setAuthenticationContext(AuthenticationFilterWebFluxContext context) {
-        log.debug("[setAuthenticationContext] Setting authentication context");
-        TokenUser username = null;
-        try {
-            username = getUsername(context.getExchange().getRequest());
-        } catch (IOException e) {
-            log.error("[validateTokenExpiration] Unexpected error");
-            return Mono.error(new ResponseStatusException(UNAUTHORIZED, "Непредвиденная ошибка"));
-        }
-        Authentication authentication = new UsernamePasswordAuthenticationToken(username, null, new ArrayList<>());
-        log.debug("[setAuthenticationContext] Setting authentication for user: " + username);
-        return Mono.just(authentication);
+        return Mono.just(context)
+                .doOnNext(ctx -> log.debug("[setAuthenticationContext] Setting authentication context"))
+                .flatMap(ctx -> {
+                    final var tokenUser = getUsername(ctx.getExchange().getRequest());
+                    return tokenUser != null
+                            ? Mono.just(tokenUser)
+                            : Mono.error(new ResponseStatusException(UNAUTHORIZED, "Не удалось найти пользователя"));
+                })
+                .flatMap(user -> {
+                    Authentication authentication = new UsernamePasswordAuthenticationToken(user, null, new ArrayList<>());
+                    log.debug("[setAuthenticationContext] Setting authentication for user: " + user);
+                    return Mono.just(authentication);
+                })
+                .doOnNext(ctx -> log.debug("[validateTokenExpiration] Token is valid"));
     }
 }
