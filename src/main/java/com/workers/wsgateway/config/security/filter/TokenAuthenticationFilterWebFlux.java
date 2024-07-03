@@ -50,19 +50,23 @@ public class TokenAuthenticationFilterWebFlux implements WebFilter {
                 .flatMap(this::validateUsername)
                 .flatMap(this::validateTokenExpiration)
                 .flatMap(this::setAuthenticationContext)
-                .flatMap(authentication -> {
-                    log.debug("[filter] Authentication successful, proceeding with request");
-                    return chain.filter(exchange)
-                            .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
-                })
-                .onErrorResume(e -> {
-                    log.error("[TokenAuthenticationFilter] Authentication error", e);
+                .flatMap(authentication -> continueFilterChain(exchange, chain, authentication))
+                .onErrorResume(e -> breakFilterChain(exchange, e));
+    }
 
-                    exchange.getResponse().setStatusCode(UNAUTHORIZED);
-                    return exchange.getResponse().writeWith(
-                            Mono.just(exchange.getResponse().bufferFactory().wrap(e.getMessage().getBytes()))
-                    );
-                });
+    private static Mono<Void> continueFilterChain(ServerWebExchange exchange, WebFilterChain chain, Authentication authentication) {
+        log.debug("[filter] Authentication successful, proceeding with request");
+        return chain.filter(exchange)
+                .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
+    }
+
+    private static Mono<Void> breakFilterChain(ServerWebExchange exchange, Throwable e) {
+        log.error("[TokenAuthenticationFilter] Authentication error", e);
+
+        exchange.getResponse().setStatusCode(UNAUTHORIZED);
+        return exchange.getResponse().writeWith(
+                Mono.just(exchange.getResponse().bufferFactory().wrap(e.getMessage().getBytes()))
+        );
     }
 
     private Mono<AuthenticationFilterWebFluxContext> createContextFilter(ServerWebExchange exchange, WebFilterChain chain) {
