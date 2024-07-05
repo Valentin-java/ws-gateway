@@ -32,7 +32,8 @@ public class TokenAuthenticationFilterWebFlux implements WebFilter {
             "/advisor",
             "/swagger-ui",
             "/specs",
-            "/ws-auth/v1/workers/auth/login");
+            "/ws-user-management/v1/workers/customer/sign-up"
+    );
 
     @Override
     public Mono<Void> filter(@NonNull ServerWebExchange exchange,

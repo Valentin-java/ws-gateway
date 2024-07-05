@@ -24,7 +24,7 @@ public class SecurityConfiguration {
             "/advisor/**",
             "/swagger-ui/**",
             "/specs/**",
-            "/ws-auth/**"
+            "/ws-user-management/**"
     };
 
     @Bean
