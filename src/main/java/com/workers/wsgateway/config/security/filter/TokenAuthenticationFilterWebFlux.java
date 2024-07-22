@@ -32,7 +32,13 @@ public class TokenAuthenticationFilterWebFlux implements WebFilter {
             "/advisor",
             "/swagger-ui",
             "/specs",
-            "/ws-user-management/v1/workers/customer/sign-up"
+            "/ws-user-management/v1/auth/customer/sign-in",
+            "/ws-user-management/v1/auth/customer/sign-up",
+            "/ws-user-management/v1/auth/handyman/sign-in",
+            "/ws-user-management/v1/auth/handyman/sign-up",
+            "/ws-user-management/v1/auth/restore/reset",
+            "/ws-user-management/v1/auth/restore/otp",
+            "/ws-user-management/v1/auth/restore/setpass"
     );
 
     @Override
@@ -41,8 +47,9 @@ public class TokenAuthenticationFilterWebFlux implements WebFilter {
         log.debug("[doFilterInternal] Start method");
         if (!WHITELIST.contains(exchange.getRequest().getPath().value())) {
             return doFilterRequest(exchange, chain);
+        } else {
+            return chain.filter(exchange);
         }
-        return chain.filter(exchange);
     }
 
     private Mono<Void> doFilterRequest(ServerWebExchange exchange, WebFilterChain chain) {
