@@ -33,9 +33,13 @@ public class TokenAuthenticationFilterWebFlux implements WebFilter {
             "/swagger-ui",
             "/specs",
             "/ws-user-management/v1/auth/customer/sign-in",
+            "/ws-user-management/v1/auth/customer/otp/sign-in",
             "/ws-user-management/v1/auth/customer/sign-up",
+            "/ws-user-management/v1/auth/customer/verify/sign-up",
+            "/ws-user-management/v1/auth/handyman/otp/sign-in",
             "/ws-user-management/v1/auth/handyman/sign-in",
             "/ws-user-management/v1/auth/handyman/sign-up",
+            "/ws-user-management/v1/auth/handyman/verify/sign-up",
             "/ws-user-management/v1/auth/restore/reset",
             "/ws-user-management/v1/auth/restore/otp",
             "/ws-user-management/v1/auth/restore/setpass"
